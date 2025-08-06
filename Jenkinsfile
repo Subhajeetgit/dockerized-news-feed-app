@@ -2,33 +2,56 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USERNAME = 'subhajeet1'
-        BACKEND_IMAGE = "${DOCKERHUB_USERNAME}/backend-app"
-        FRONTEND_IMAGE = "${DOCKERHUB_USERNAME}/frontend-app"
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials' 
+        DOCKER_HUB_USERNAME = 'subhajeet1'               
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Clone Repository') {
             steps {
-                git 'https://github.com/Subhajeetgit/dockerized-news-feed-app.git'
+                echo "Cloning GitHub repository..."
+                
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build Frontend Image') {
             steps {
-                sh 'docker build -t $BACKEND_IMAGE ./backend'
-                sh 'docker build -t $FRONTEND_IMAGE ./frontend'
+                dir('frontend') {
+                    script {
+                        dockerImageFrontend = docker.build("${DOCKER_HUB_USERNAME}/frontend-app")
+                    }
+                }
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                dir('backend') {
+                    script {
+                        dockerImageBackend = docker.build("${DOCKER_HUB_USERNAME}/backend-app")
+                    }
+                }
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                    sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
-                    sh 'docker push $BACKEND_IMAGE'
-                    sh 'docker push $FRONTEND_IMAGE'
+                script {
+                    withDockerRegistry([credentialsId: DOCKER_HUB_CREDENTIALS, url: '']) {
+                        dockerImageFrontend.push('latest')
+                        dockerImageBackend.push('latest')
+                    }
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build and Push Successful!'
+        }
+        failure {
+            echo '❌ Build Failed!'
         }
     }
 }
