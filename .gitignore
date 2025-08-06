@@ -1,0 +1,14 @@
+# node modules
+**/node_modules
+
+# dotenv files
+**/.env
+
+# build output
+**/build
+
+# logs
+*.log
+
+# Docker
+**/tmp
